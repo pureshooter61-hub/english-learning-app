@@ -43,10 +43,13 @@ export const loadCSVFromURL = async (url) => {
   }
 };
 
-export const getAudioURL = (audioFileName, basePath = '/assets/audio/分割音声') => {
+export const getAudioURL = (audioFileName, basePath = 'assets/audio/separate_audio') => {
+  const finalBasePath = `${import.meta.env.BASE_URL}${basePath}`;
   // .wavまたは.mp3を試行
-  const wavPath = `${basePath}/${audioFileName}.wav`;
-  const mp3Path = `${basePath}/${audioFileName}.mp3`;
+  const wavPath = `${finalBasePath}/${audioFileName}.wav`;
+  const mp3Path = `${finalBasePath}/${audioFileName}.mp3`;
+  
+  return { wavPath, mp3Path };
   
   return { wavPath, mp3Path };
 };

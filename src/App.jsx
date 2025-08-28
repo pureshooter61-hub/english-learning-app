@@ -5,13 +5,17 @@ import './App.css'
 
 import React from 'react';
 import EnglishLearningApp from './components/EnglishLearningApp';
+import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
 function App() {
   return (
-    <div className="App">
-      <EnglishLearningApp />
-    </div>
+    <ErrorBoundary>
+      <div className="App">
+        <EnglishLearningApp />
+      </div>
+    </ErrorBoundary>
+
   );
 }
 

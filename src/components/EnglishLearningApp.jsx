@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, Square, Volume2 } from 'lucide-react';
+import { loadCSVFromURL, getAudioURL } from '../utils/fileLoader.js';
 
 const EnglishLearningApp = () => {
   // State variables
@@ -42,6 +43,31 @@ const EnglishLearningApp = () => {
 
   const loadCSVData = async () => {
     try {
+      // 実際のCSVファイルを読み込む
+    const csvPath = `${import.meta.env.BASE_URL}assets/data/sentence_data.csv`;
+    console.log('Attempting to load CSV from:', csvPath);
+    const csvData = await loadCSVFromURL(csvPath);
+    
+    // データの前処理（必要に応じて）
+    const processedData = csvData.map(row => ({
+      ...row,
+      Stage: parseInt(row.Stage) || 0,
+      sentence: parseInt(row.sentence) || undefined
+    })).filter(row => row.Stage > 0); // 無効なデータを除外
+
+    setCsvData(processedData);
+    
+    // Extract unique stages
+    const uniqueStages = [...new Set(processedData.map(item => item.Stage))].sort((a, b) => a - b);
+    setStages(uniqueStages);
+    
+    console.log('CSV data loaded successfully:', processedData.length, 'records');
+  } catch (error) {
+    console.error('Failed to load CSV data:', error);
+    alert('CSVデータの読み込みに失敗しました。サンプルデータを使用します。');
+    
+    // フォールバック用のサンプルデータ
+
       // In a real application, you would load CSV from a file
       // For demo purposes, using sample data
       const sampleData = [
@@ -78,17 +104,11 @@ const EnglishLearningApp = () => {
       ];
 
       setCsvData(sampleData);
-      
-      // Extract unique stages
-      const uniqueStages = [...new Set(sampleData.map(item => item.Stage))].sort((a, b) => a - b);
-      setStages(uniqueStages);
-      
-      console.log('CSV data loaded successfully');
-    } catch (error) {
-      console.error('Failed to load CSV data:', error);
-      alert('CSVデータの読み込みに失敗しました。');
+      setStages([1, 2]);
     }
   };
+
+  
 
   const handleStageChange = (stage) => {
     setSelectedStage(stage);
@@ -143,25 +163,52 @@ const EnglishLearningApp = () => {
 
   const playAudioWithSpeed = async (audioFileName) => {
     try {
-      // In a real application, you would load audio files from the server
-      // For demo purposes, we'll simulate audio playback
-      console.log(`Playing audio: ${audioFileName} at speed: ${speed}`);
-      
-      // Simulate audio loading and playing
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.playbackRate = speed;
-        audioRef.current.volume = volume;
-        await audioRef.current.play();
-        setIsPlaying(true);
-        setIsPaused(false);
-      }
+      const { wavPath, mp3Path } = getAudioURL(audioFileName);
+    
+    // 音声ファイルの存在確認と読み込み
+    let audioUrl = null;
+    try {
+      const checkAudioPath = async (path) => {
+        try {
+          const response = await fetch(path);
+          const contentType = response.headers.get('content-type');
+          if (response.ok && contentType && contentType.startsWith('audio')) {
+            return path;
+          }
+        } catch (e) {
+          return null;
+        }
+        return null;
+      };
+      audioUrl = await checkAudioPath(wavPath) || await checkAudioPath(mp3Path);
+    } catch (error) {
+      console.error('Audio file check failed:', error);
+    }
 
-      // For demo, we'll use a timeout to simulate audio duration
-      setTimeout(() => {
+    if (!audioUrl) {
+      alert(`音声ファイルが見つかりません: ${audioFileName}`);
+      return;
+    }
+
+    if (audioRef.current) {
+      audioRef.current.src = audioUrl;
+      audioRef.current.currentTime = 0;
+      audioRef.current.playbackRate = speed;
+      audioRef.current.volume = volume;
+      
+      await audioRef.current.play();
+      setIsPlaying(true);
+      setIsPaused(false);
+      
+      // 音声終了時のイベントリスナー
+      const handleEnded = () => {
         setIsPlaying(false);
         setCurrentAudioType(null);
-      }, 3000);
+        audioRef.current.removeEventListener('ended', handleEnded);
+      };
+      
+      audioRef.current.addEventListener('ended', handleEnded);
+    }
 
     } catch (error) {
       console.error('Audio playback failed:', error);
@@ -286,7 +333,7 @@ const EnglishLearningApp = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
-          速読英単語 必修編 音声プレイヤー
+          リスニング練習用プレイヤー
         </h1>
 
         {/* Controls */}
@@ -309,7 +356,7 @@ const EnglishLearningApp = () => {
 
             {/* Writing Selection */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Writing:</label>
+              <label className="text-sm font-medium text-black">Writing:</label>
               <select
                 value={selectedWriting}
                 onChange={(e) => handleWritingChange(e.target.value)}
@@ -382,12 +429,12 @@ const EnglishLearningApp = () => {
             </button>
           </div>
 
-          <div className="p-6">
+          <div className={`p-6 min-h-[20rem] ${activeTab === 'full' ? 'flex justify-center' : ''}`}>
             {activeTab === 'full' && (
-              <div className="max-w-4xl mx-auto">
+              <div className="max-w-4xl">
                 {fullTextData ? (
                   <>
-                    <div className="mb-4">
+                    <div className="mb-6">
                       <p className="text-lg font-medium text-gray-800 leading-relaxed">
                         {fullTextData.English}
                       </p>
@@ -431,17 +478,19 @@ const EnglishLearningApp = () => {
                 <div>
                   {currentSentence ? (
                     <>
-                      <div className="mb-4">
-                        <p className="text-lg font-medium text-gray-800 leading-relaxed">
-                          {currentSentence.English}
-                        </p>
+                      <div className="pl-4">
+                        <div className="mb-6">
+                          <p className="text-lg font-medium text-gray-800 leading-relaxed">
+                            {currentSentence.English}
+                          </p>
+                        </div>
+                        <div className="mb-6">
+                          <p className="text-gray-600 leading-relaxed">
+                            {currentSentence.Japanese}
+                          </p>
+                        </div>
                       </div>
-                      <div className="mb-6">
-                        <p className="text-gray-600 leading-relaxed">
-                          {currentSentence.Japanese}
-                        </p>
-                      </div>
-                      <div className="flex gap-3">
+                      <div className="flex gap-3 pl-4">
                         <button
                           onClick={toggleSentenceAudio}
                           className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
