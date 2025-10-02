@@ -435,12 +435,12 @@ const EnglishLearningApp = () => {
                 {fullTextData ? (
                   <>
                     <div className="mb-6">
-                      <p className="text-lg font-medium text-gray-800 leading-relaxed">
+                      <p className="text-lg font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">
                         {fullTextData.English}
                       </p>
                     </div>
                     <div className="mb-6">
-                      <p className="text-gray-600 leading-relaxed">
+                      <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
                         {fullTextData.Japanese}
                       </p>
                     </div>
@@ -480,12 +480,12 @@ const EnglishLearningApp = () => {
                     <>
                       <div className="pl-4">
                         <div className="mb-6">
-                          <p className="text-lg font-medium text-gray-800 leading-relaxed">
+                          <p className="text-lg font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">
                             {currentSentence.English}
                           </p>
                         </div>
                         <div className="mb-6">
-                          <p className="text-gray-600 leading-relaxed">
+                          <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
                             {currentSentence.Japanese}
                           </p>
                         </div>
